@@ -14,6 +14,7 @@ fail () {
   # Print an error message and exit.
 
   tput setaf 1 ; echo "Error: ${1}"
+  tput sgr0
   exit 1
 }
 
@@ -42,7 +43,7 @@ decrypt () {
 
   ${gpg} \
     --decrypt --armor --batch \
-    --command-fd 0 --passphrase "${1}" "${2}" 2>/dev/null
+    --command-fd 0 --passphrase "${1}" "${2}" 2>/dev/null || fail "Decrypt failed"
 }
 
 
@@ -67,7 +68,7 @@ read_pass () {
     fail "No passwords found"
   else
     get_pass "Enter password to unlock ${safe}: " ; echo
-    decrypt ${password} ${safe} | grep " ${username}" || fail "Decryption failed"
+    decrypt ${password} ${safe} | grep -i "${username}" || fail "Password not found"
   fi
 }
 
@@ -75,7 +76,7 @@ read_pass () {
 gen_pass () {
   # Generate a password.
 
-  len=40
+  len=10
   read -p "Password length? (default: 40, max: 100) " length
 
   if [[ ${length} =~ ^[0-9]+$ ]] ; then
@@ -94,7 +95,7 @@ write_pass () {
   if [ -z ${userpass+x} ] ; then
     new_entry=" "
   else
-    new_entry="${userpass} ${username}"
+    new_entry="${userpass} ${username} ${service}"
   fi
 
   get_pass "Enter password to unlock ${safe}: " ; echo
@@ -118,10 +119,11 @@ write_pass () {
 create_username () {
   # Create a new username and password.
 
+  read -p "Service: " service
   read -p "Username: " username
   read -p "Generate password? (y/n, default: y) " rand_pass
   if [ "${rand_pass}" == "n" ]; then
-    get_pass "Enter password for \"${username}\": " ; echo
+    get_pass "Enter password for \"${username}\" at $service: " ; echo
     userpass=$password
   else
     userpass=$(gen_pass)
@@ -155,3 +157,4 @@ fi
 
 tput setaf 2 ; echo "Done"
 
+tput sgr0
